@@ -75,11 +75,52 @@ index.html
   let scannerControls = null;
   let busy = false;
 
-  async function login() {
-    const staffID = document.getElementById("staffID").value.trim();
-    const accessCode = document.getElementById("accessCode").value.trim();
-    const message = document.getElementById("loginMessage");
-    const button = document.getElementById("loginButton");
+  
+async function startScanner() {
+  const message = document.getElementById("scanMessage");
+  const button = document.getElementById("scanButton");
+  const readerArea = document.getElementById("reader");
+
+  if (!currentStaff || scannerControls) return;
+
+  try {
+    message.textContent = "Opening camera. Please allow camera access.";
+
+    if (!window.ZXingBrowser) {
+      throw new Error("Scanner library did not load.");
+    }
+
+    readerArea.innerHTML = "";
+
+    const video = document.createElement("video");
+    video.style.width = "100%";
+    video.style.borderRadius = "12px";
+    video.setAttribute("autoplay", "true");
+    video.setAttribute("muted", "true");
+    video.setAttribute("playsinline", "true");
+    readerArea.appendChild(video);
+
+    reader = new ZXingBrowser.BrowserQRCodeReader();
+
+    scannerControls = await reader.decodeFromVideoDevice(
+      undefined,
+      video,
+      (result, error) => {
+        if (result && !busy) {
+          awardStamp(result.getText());
+        }
+      }
+    );
+
+    button.disabled = true;
+    message.textContent = "Camera ready! Point it at the group QR code.";
+
+  } catch (error) {
+    scannerControls = null;
+    message.textContent = "Camera error: " + error.message;
+  }
+}
+
 
     if (!staffID || !accessCode) {
       message.textContent = "Please enter your Staff ID and access code.";
