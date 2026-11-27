@@ -122,7 +122,51 @@ async function startScanner() {
 }
 
 
-    if (!staffID || !accessCode) {
+    async function login() {
+  const staffID = document.getElementById("staffID").value.trim();
+  const accessCode = document.getElementById("accessCode").value.trim();
+  const message = document.getElementById("loginMessage");
+  const button = document.getElementById("loginButton");
+
+  if (!staffID || !accessCode) {
+    message.textContent = "Please enter your Staff ID and access code.";
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = "Checking staff details...";
+
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        action: "validateStaff",
+        staffID: staffID,
+        accessCode: accessCode
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || "Login failed.");
+    }
+
+    currentStaff = { staffID, accessCode };
+
+    document.getElementById("boothName").textContent = result.boothName;
+    document.getElementById("scannerArea").hidden = false;
+    message.textContent = "Welcome, " + result.staffName + "!";
+    document.getElementById("staffID").disabled = true;
+    document.getElementById("accessCode").disabled = true;
+    button.hidden = true;
+
+  } catch (error) {
+    message.textContent = "Login error: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
       message.textContent = "Please enter your Staff ID and access code.";
       return;
     }
