@@ -1,73 +1,170 @@
-index.html
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BreadTalk Christmas QR Scanner</title>
+  <title>BreadTalk Christmas Party 2026</title>
+
   <script src="https://unpkg.com/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
+
   <style>
+    * { box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #064e3b;
-      color: white;
-      text-align: center;
+      margin: 0;
       padding: 20px;
+      background: #f7f3ed;
+      font-family: Arial, sans-serif;
+      color: #333;
     }
-    .card {
-      background: white;
-      color: #14532d;
-      max-width: 450px;
+
+    .container {
+      max-width: 480px;
       margin: 20px auto;
-      padding: 22px;
-      border-radius: 18px;
+      background: white;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 3px 15px #00000015;
     }
+
+    h1 {
+      text-align: center;
+      color: #a32626;
+      font-size: 25px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 19px;
+    }
+
     input, button {
       width: 100%;
-      box-sizing: border-box;
       padding: 14px;
-      margin: 9px 0;
+      margin: 8px 0;
+      border-radius: 8px;
       font-size: 16px;
-      border-radius: 9px;
     }
-    input { border: 1px solid #ccc; }
+
+    input {
+      border: 1px solid #ccc;
+    }
+
     button {
-      border: 0;
-      background: #dc2626;
+      border: none;
+      background: #a32626;
       color: white;
       font-weight: bold;
+      cursor: pointer;
     }
-    button:disabled { opacity: .6; }
-    #reader video { width: 100%; border-radius: 12px; }
-    .message { overflow-wrap: anywhere; }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      background: #555;
+    }
+
+    #reader {
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    #reader video {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    .message {
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 8px;
+      background: #f1f1f1;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .booth {
+      text-align: center;
+      color: #a32626;
+      font-weight: bold;
+      font-size: 19px;
+    }
   </style>
 </head>
+
 <body>
+
+<div class="container">
+
   <h1>🎄 BreadTalk Christmas Party 2026</h1>
-  <div class="card">
-    <h2>🎅 Booth Staff Scanner</h2>
+  <h2>Digital Stamp Collection</h2>
 
-    <label>Staff ID</label>
-    <input id="staffID" placeholder="e.g. STAFF01">
+  <section id="loginArea">
+    <h2>Staff Login</h2>
 
-    <label>Access Code</label>
-    <input id="accessCode" type="password" placeholder="Your private access code">
+    <input
+      id="staffID"
+      type="text"
+      placeholder="Enter Staff ID"
+      autocomplete="username"
+    >
 
-    <button id="loginButton" onclick="login()">STAFF LOGIN</button>
+    <input
+      id="accessCode"
+      type="password"
+      placeholder="Enter Access Code"
+      autocomplete="current-password"
+    >
 
-    <div id="loginMessage" class="message"></div>
+    <button id="loginButton" onclick="login()">
+      LOGIN
+    </button>
 
-    <div id="scannerArea" hidden>
-      <h3 id="boothName"></h3>
-      <p>Scan the group's QR code after they complete your game.</p>
-      <div id="reader"></div>
-      <button id="scanButton" onclick="startScanner()">📷 START SCANNER</button>
-      <div id="scanMessage" class="message"></div>
-      <button onclick="logout()">LOG OUT</button>
+    <div id="loginMessage" class="message" aria-live="polite">
+      Please enter your staff details.
     </div>
-  </div>
+  </section>
+
+  <section id="scannerArea" class="hidden">
+
+    <h2>Welcome, <span id="staffName"></span></h2>
+
+    <div class="booth" id="boothName"></div>
+
+    <p style="text-align:center">
+      Scan the group's QR code to award their booth stamp.
+    </p>
+
+    <div id="reader"></div>
+
+    <div id="scanMessage" class="message" aria-live="polite">
+      Ready to scan.
+    </div>
+
+    <button id="scanButton" onclick="startScanner()">
+      START SCANNER
+    </button>
+
+    <button class="secondary" onclick="stopScanner()">
+      STOP SCANNER
+    </button>
+
+    <button class="secondary" onclick="logout()">
+      LOG OUT
+    </button>
+
+  </section>
+
+</div>
 
 <script>
-  // Replace this with your Google Apps Script Web App URL.
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkJAAU_02v5ckoxtWQsk0ko27pcPXPKvYkwOLfpsH7l-onj-Md-Jm9DHfX_ixh8eST/exec";
 
   let currentStaff = null;
@@ -75,98 +172,13 @@ index.html
   let scannerControls = null;
   let busy = false;
 
-  
-async function startScanner() {
-  const message = document.getElementById("scanMessage");
-  const button = document.getElementById("scanButton");
-  const readerArea = document.getElementById("reader");
+  async function login() {
+    const staffID = document.getElementById("staffID").value.trim();
+    const accessCode = document.getElementById("accessCode").value.trim();
+    const message = document.getElementById("loginMessage");
+    const button = document.getElementById("loginButton");
 
-  if (!currentStaff || scannerControls) return;
-
-  try {
-    message.textContent = "Opening camera. Please allow camera access.";
-
-    if (!window.ZXingBrowser) {
-      throw new Error("Scanner library did not load.");
-    }
-
-    readerArea.innerHTML = "";
-
-    const video = document.createElement("video");
-    video.style.width = "100%";
-    video.style.borderRadius = "12px";
-    video.setAttribute("autoplay", "true");
-    video.setAttribute("muted", "true");
-    video.setAttribute("playsinline", "true");
-    readerArea.appendChild(video);
-
-    reader = new ZXingBrowser.BrowserQRCodeReader();
-
-    scannerControls = await reader.decodeFromVideoDevice(
-      undefined,
-      video,
-      (result, error) => {
-        if (result && !busy) {
-          awardStamp(result.getText());
-        }
-      }
-    );
-
-    button.disabled = true;
-    message.textContent = "Camera ready! Point it at the group QR code.";
-
-  } catch (error) {
-    scannerControls = null;
-    message.textContent = "Camera error: " + error.message;
-  }
-}
-
-
-    async function login() {
-  const staffID = document.getElementById("staffID").value.trim();
-  const accessCode = document.getElementById("accessCode").value.trim();
-  const message = document.getElementById("loginMessage");
-  const button = document.getElementById("loginButton");
-
-  if (!staffID || !accessCode) {
-    message.textContent = "Please enter your Staff ID and access code.";
-    return;
-  }
-
-  button.disabled = true;
-  message.textContent = "Checking staff details...";
-
-  try {
-    const response = await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: new URLSearchParams({
-        action: "validateStaff",
-        staffID: staffID,
-        accessCode: accessCode
-      })
-    });
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.message || "Login failed.");
-    }
-
-    currentStaff = { staffID, accessCode };
-
-    document.getElementById("boothName").textContent = result.boothName;
-    document.getElementById("scannerArea").hidden = false;
-    message.textContent = "Welcome, " + result.staffName + "!";
-    document.getElementById("staffID").disabled = true;
-    document.getElementById("accessCode").disabled = true;
-    button.hidden = true;
-
-  } catch (error) {
-    message.textContent = "Login error: " + error.message;
-  } finally {
-    button.disabled = false;
-  }
-}
+    if (!staffID || !accessCode) {
       message.textContent = "Please enter your Staff ID and access code.";
       return;
     }
@@ -186,15 +198,24 @@ async function startScanner() {
 
       const result = await response.json();
 
-      if (!result.success) throw new Error(result.message || "Login failed.");
+      if (!result.success) {
+        throw new Error(result.message || "Login failed.");
+      }
 
-      currentStaff = { staffID, accessCode };
+      currentStaff = {
+        staffID: staffID,
+        accessCode: accessCode
+      };
+
+      document.getElementById("staffName").textContent = result.staffName;
       document.getElementById("boothName").textContent = result.boothName;
-      document.getElementById("scannerArea").hidden = false;
-      message.textContent = "Welcome, " + result.staffName + "!";
-      document.getElementById("staffID").disabled = true;
-      document.getElementById("accessCode").disabled = true;
-      button.hidden = true;
+
+      document.getElementById("loginArea").classList.add("hidden");
+      document.getElementById("scannerArea").classList.remove("hidden");
+
+      document.getElementById("scanMessage").textContent =
+        "Login successful. You can now scan a group QR code.";
+
     } catch (error) {
       message.textContent = "Login error: " + error.message;
     } finally {
@@ -203,50 +224,66 @@ async function startScanner() {
   }
 
   async function startScanner() {
+    if (!currentStaff) {
+      alert("Please log in first.");
+      return;
+    }
+
+    if (scannerControls) return;
+
     const message = document.getElementById("scanMessage");
     const button = document.getElementById("scanButton");
 
-    if (!currentStaff || scannerControls) return;
-
     if (!window.ZXingBrowser) {
-      message.textContent = "Scanner library did not load. Please refresh.";
+      message.textContent = "QR scanner library could not load. Refresh the page.";
       return;
     }
 
     try {
-      message.textContent = "Opening camera. Please allow camera access.";
-
       reader = new ZXingBrowser.BrowserQRCodeReader();
+
+      button.disabled = true;
+      message.textContent = "Starting camera...";
 
       scannerControls = await reader.decodeFromVideoDevice(
         undefined,
-        document.getElementById("reader"),
-        (result) => {
-          if (result && !busy) awardStamp(result.getText());
+        "reader",
+        async (result, error) => {
+          if (result && !busy) {
+            busy = true;
+            const token = result.getText();
+
+            await awardStamp(token);
+          }
         }
       );
 
-      button.disabled = true;
-      message.textContent = "Camera ready. Point it at the group QR code.";
+      message.textContent = "Camera started. Point it at a group QR code.";
+
     } catch (error) {
+      scannerControls = null;
       message.textContent = "Camera error: " + error.message;
+    } finally {
+      button.disabled = false;
     }
   }
 
-  async function stopScanner() {
+  function stopScanner() {
     if (scannerControls) {
       scannerControls.stop();
       scannerControls = null;
     }
+
+    document.getElementById("scanMessage").textContent =
+      "Scanner stopped.";
+
     document.getElementById("scanButton").disabled = false;
   }
 
   async function awardStamp(token) {
-    if (busy) return;
-    busy = true;
-    await stopScanner();
-
     const message = document.getElementById("scanMessage");
+
+    stopScanner();
     message.textContent = "Checking QR code and awarding stamp...";
 
     try {
@@ -261,46 +298,47 @@ async function startScanner() {
       });
 
       const result = await response.json();
-      if (!result.success) throw new Error(result.message || "Stamp could not be awarded.");
 
-      message.innerHTML =
-        "<h2>🎉 STAMP AWARDED!</h2>" +
-        "<p>Group: " + safe(result.groupName) + "</p>" +
-        "<p>Booth: " + safe(result.boothName) + "</p>" +
-        "<h2>" + result.totalStamps + " / 6 STAMPS</h2>" +
-        (result.eligible
-          ? "<h3>🎄 CONGRATULATIONS! ALL OF YOU ARE ELIGIBLE FOR THE CHRISTMAS LUCKY DRAW!</h3>"
-          : "<p>Well done! Continue to the next booth.</p>");
+      if (!result.success) {
+        throw new Error(result.message || "Stamp could not be awarded.");
+      }
 
-      document.getElementById("scanButton").textContent = "SCAN NEXT GROUP";
+      if (result.eligible) {
+        message.textContent =
+          "🎉 CONGRATULATIONS! " + result.groupName +
+          " has collected all 6 stamps and is eligible for the lucky draw!";
+      } else {
+        message.textContent =
+          "✅ Stamp awarded to " + result.groupName +
+          " at " + result.boothName +
+          "! Total stamps: " + result.totalStamps + " / 6";
+      }
+
     } catch (error) {
-      message.textContent = error.message;
-      document.getElementById("scanButton").textContent = "TRY AGAIN";
+      message.textContent = "Error: " + error.message;
     } finally {
       busy = false;
       document.getElementById("scanButton").disabled = false;
     }
   }
 
-  function safe(value) {
-    return String(value).replace(/[&<>"']/g, c => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-    })[c]);
-  }
+  function logout() {
+    stopScanner();
 
-  async function logout() {
-    await stopScanner();
     currentStaff = null;
-    busy = false;
-    document.getElementById("scannerArea").hidden = true;
-    document.getElementById("staffID").disabled = false;
-    document.getElementById("accessCode").disabled = false;
+
     document.getElementById("staffID").value = "";
     document.getElementById("accessCode").value = "";
-    document.getElementById("loginButton").hidden = false;
-    document.getElementById("loginMessage").textContent = "";
-    document.getElementById("scanMessage").textContent = "";
+
+    document.getElementById("loginArea").classList.remove("hidden");
+    document.getElementById("scannerArea").classList.add("hidden");
+
+    document.getElementById("loginMessage").textContent =
+      "Please enter your staff details.";
+
+    busy = false;
   }
 </script>
+
 </body>
 </html>
